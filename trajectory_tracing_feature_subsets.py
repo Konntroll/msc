@@ -47,6 +47,8 @@ class FeatureBasedAttemptRecord:
                 FEAT LEN: {len(self.features)}
             '''
 
+# Calculate global alignment score. Returns 0 for perfect match.
+
 def global_alignment_score(seq1, seq2, match=0, mismatch=1, gap=1):
     # Initialize matrix
     matrix = np.zeros((len(seq1) + 1, len(seq2) + 1))
@@ -63,6 +65,9 @@ def global_alignment_score(seq1, seq2, match=0, mismatch=1, gap=1):
     alignment_score = matrix[-1, -1]
 
     return alignment_score
+
+# Find a solution that is most similar to the supplied attempt.
+# Unlike a similar method for optimized ASTs, this runs much faster.
 
 def find_closest_ref_feature_set(page: tuple, features: list[str], with_aliases: bool) -> list[str]:
   ref_feature_set = set()
@@ -85,6 +90,8 @@ def find_closest_ref_feature_set(page: tuple, features: list[str], with_aliases:
 
 # %%
 
+# Retrieve user names from database
+
 users = {}
 
 for page in pages:
@@ -95,6 +102,8 @@ for page in pages:
   users[page] = user_names
 
 # %%
+
+# Retrieve and process user attempts into feature subsets of two types
 
 start = time.time()
 attempts_with_aliases = {}
@@ -117,6 +126,10 @@ for page in pages:
     attempts_with_common_alias[page][username] = [ FeatureBasedAttemptRecord(record[0], record[1], record[2], list(extract_query_features(cleanup(record[2]), page_features, True, True)), record[3]) for record in records if record[2].strip() != '' ]
 
 # %%
+
+# Store reference solution for each user
+# This is either the user's own solution if they reached it,
+# or a solution most similar to their last attempt.
 
 ref_solutions_for_subset_with_aliases = {}
 ref_solutions_for_subset_with_common_alias = {}
@@ -157,6 +170,8 @@ for page in pages:
       continue
 
 # %%
+
+# Generate trajectories for feature sets with aliases preserved and with a common alias.
 
 start = time.time()
 
@@ -205,14 +220,7 @@ for page in pages:
 
 # %%
 
-connector = mysql.connector.connect(
-  host="localhost",
-  user="root",
-  password="",
-  database="Zoo"
-)
-
-cursor = connector.cursor()
+# Store obtained trajectories in database.
 
 sql = 'INSERT INTO trajectories_with_common_alias (pg, qnum, username, trajectory) VALUES (%s, %s, %s, %s)'
 for page in pages:
@@ -234,7 +242,9 @@ for page in pages:
     print(f'Inserted {cursor.rowcount} rows.')
 
 # %%
-    
+
+# Produce bar charts of trajectory distributions by length by question
+
 lengths = {}
 for page in pages:
   lengths[page] = {}
@@ -273,6 +283,8 @@ for page in pages:
   plt.show()
 
 # %%
+
+# Generate intertia elbow plots for trajectories of given lengths and result
 
 permutations = [
   (5, True),
@@ -316,6 +328,9 @@ plt.tight_layout()
 plt.show()
 
 # %%
+
+# Generate given number of clusters for trajectories of given lengths and result
+
 ext_permutations_for_subsets_with_aliases = [
   (5, True, 4),
   (5, False, 3),
